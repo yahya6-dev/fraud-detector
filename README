@@ -11,5 +11,5 @@ Internal Implementation it uses two servers:
 Note clients on first connection are required to log in using credentials which is stored in a sqlite3 database file.
 
 Several other technology are used such as pygame to use Computer Speaker for alerting in case of fraud.
-WxPython3 which is use to construct the Graphical user interface.
+WxPython3 which is used to construct the Graphical user interface.
 We use UDP for transferring frame so that it become more efficient than TCP  even if some frame are missing.
