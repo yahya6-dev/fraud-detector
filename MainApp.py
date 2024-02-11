@@ -3,10 +3,14 @@
 ## it start our servers each in a new process and record PID in case user need to shut them down
 ## load wx modules and necessary modules
 import wx
+from Components.MyFrame import MyFrame
 
 class MyApp(wx.App):
         def OnInit(self):
             """ this hold our main Component """
+            self.frame = MyFrame(None,"Fraud Detector And Facial Recognition")
+            self.frame.Show(True)       
+            self.frame.Center()   
             return True
 
 if __name__=="__main__":
