@@ -9,8 +9,7 @@ class MyApp(wx.App):
         def OnInit(self):
             """ this hold our main Component """
             self.frame = MyFrame(None,"Fraud Detector And Facial Recognition")
-            self.frame.Show(True)       
-            self.frame.Center()   
+            self.frame.Show(True)
             return True
 
 if __name__=="__main__":
