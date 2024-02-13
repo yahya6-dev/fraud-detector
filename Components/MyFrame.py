@@ -5,9 +5,55 @@
 
 import wx,math
 from wx.lib import sized_controls as size
-#import utils
+import Components.utils as utils
 # login panel which consist of a password and username field 
 # with a submit button that popup in the initial loading
+
+
+# license panel 
+class LicensePanel(wx.Dialog):
+    def __init__(self,parent):
+        super(LicensePanel,self).__init__(parent)
+        #x,y = self.TopLevelParent.GetSize()
+        #self.SetInitialSize((x,y))
+        # add our sizer here
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # add child element here
+        # we start with text and image "enter your activation key" and key image
+        # text label that appear atop with its style
+        headerSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.font = wx.Font()
+        self.font.SetPointSize(12)
+        self.font.MakeBold()
+        # static text control
+        self.textHeader = wx.StaticText(self,label="Enter Your Activation Key")
+        self.textHeader.ForegroundColour = "rgb(255,255,255)"
+        self.textHeader.SetFont(self.font)
+        #self.textHeader.BackgroundColour = "rgb(31,31,31)"
+        # add image key
+        self.key = wx.StaticBitmap(self,bitmap=wx.Bitmap("./Components/assets/key.png"))
+        headerSizer.Add(self.textHeader,1,wx.ALIGN_CENTRE_VERTICAL|wx.ALL,8)
+        headerSizer.Add(self.key,1,wx.ALL|wx.ALIGN_TOP,0)
+        # add Activation key input box
+        #self.textError = wx.StaticText(self,label="")
+        self.ctrlText = wx.TextCtrl(self) 
+        # buttons sizer horizontal one
+        buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
+        # set trial and submit license key
+        self.buttonTrial = wx.Button(self,label="Try Trial")
+        self.buttonTrial.BackgroundColour = "rgb(38,124,254)"
+        self.buttonTrial.ForegroundColour = "rgb(255,255,255)"
+        self.buttonLicense = wx.Button(self,label="Submit")
+        # add the two buttons
+        buttonSizer.Add(self.buttonTrial,0,wx.ALL|wx.ALIGN_LEFT,8)
+        buttonSizer.AddStretchSpacer()
+        buttonSizer.Add(self.buttonLicense,0,wx.ALL|wx.ALIGN_RIGHT,8)
+        # set main layout sizer"""
+        sizer.Add(headerSizer,0,wx.ALL|wx.EXPAND,0)
+        sizer.Add(self.ctrlText,0,wx.EXPAND|wx.ALL,8)
+        sizer.Add(buttonSizer,0,wx.EXPAND|wx.ALL,0)
+        self.SetSizer(sizer)
 
 class MyPanel(wx.Panel):
     # an internal class to represent login field and text
@@ -28,19 +74,13 @@ class MyPanel(wx.Panel):
             self.passEntry.SetSizerProp("expand",True)
             self.passLabel.SetSizerProp("valign","center")
             # set entries hint text like placeholder in html
-            self.passEntry.SetHint("Enter Password?")
+            #self.passEntry.SetHint("Enter Password?")
             self.usernameEntry.SetHint("Enter Username?")
             # add login button
             # serve to show error in case of wrong input
             self.text = wx.StaticText(self,label="")
             self.button = wx.Button(self,label="Log In")
             self.button.SetSizerProp("halign","right")
-            # bind evt to button to login
-            self.Bind(wx.EVT_BUTTON,self.OnLogin,self.button)
-
-        def OnLogin(self,event):
-            self.text.Label = "Error Login Please Check Your Details"
-            self.text.ForegroundColour  = "rgb(220,0,0)"
 
 
     def __init__(self,parent):
@@ -100,4 +140,21 @@ class MyFrame(wx.Frame):
         print(self.DoGetPosition())
         # our login panel
         self.panel = MyPanel(self)
+        # bind evt to button to login
+        self.Bind(wx.EVT_BUTTON,self.OnLogin,self.panel.login.button)
+
+    def OnLogin(self,event):
+        # retrieve password and username
+        username = self.panel.login.usernameEntry.Value
+        password = self.panel.login.passEntry.Value
+        print(username,password)
+        # check login for validity
+        if utils.checkLogin(username,password):
+            self.panel = LicensePanel(self)
+            self.panel.ShowModal()
+            self.Close()
+            
+        else:
+            self.panel.login.text.Label = "Error Login Please Check Your Details"
+            self.panel.login.text.ForegroundColour  = "rgb(237,12,12)"
 
