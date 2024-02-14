@@ -3,7 +3,7 @@
 ## proceed to the main view else it display error either caused it locked
 ## or incorrect password and username
 
-import wx,math
+import wx,math,os
 from wx.lib import sized_controls as size
 import Components.utils as utils
 # login panel which consist of a password and username field 
@@ -41,23 +41,36 @@ class LicensePanel(wx.Dialog):
         # buttons sizer horizontal one
         buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
         # set trial and submit license key
-        self.buttonTrial = wx.Button(self,label="Try Trial")
+        self.buttonTrial = wx.Button(self,label="Try Trial For 10 Days")
         self.buttonTrial.BackgroundColour = "rgb(38,124,254)"
         self.buttonTrial.ForegroundColour = "rgb(255,255,255)"
         self.buttonLicense = wx.Button(self,label="Submit")
         # add the two buttons
-        buttonSizer.Add(self.buttonTrial,0,wx.ALL|wx.ALIGN_LEFT,8)
+        buttonSizer.Add(self.buttonTrial,0,wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_LEFT,8)
         buttonSizer.AddStretchSpacer()
-        buttonSizer.Add(self.buttonLicense,0,wx.ALL|wx.ALIGN_RIGHT,8)
+        buttonSizer.Add(self.buttonLicense,0,wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.ALIGN_RIGHT,8)
         # set main layout sizer"""
         sizer.Add(headerSizer,0,wx.ALL|wx.EXPAND,0)
         sizer.Add(self.ctrlText,0,wx.EXPAND|wx.ALL,8)
         sizer.Add(buttonSizer,0,wx.EXPAND|wx.ALL,0)
         self.SetSizer(sizer)
+        # event handler for trial button
+        self.Bind(wx.EVT_BUTTON,self.OnTrial,self.buttonTrial)
+
+    def OnTrial(self,event):
+        # initialized trials day
+        cursor,conn,result = utils.getTrialInfo()
+        # insert statement
+        stm = "insert into trial(days,istrial) values(1,1)"
+        cursor.execute(stm)
+        conn.commit()
+        # start our app in new process
+        self.TopLevelParent.Close()
+        os.execlp("python3","python3","Components/MainWindow.py")
 
 class MyPanel(wx.Panel):
     # an internal class to represent login field and text
-    class _Login(size.SizedScrolledPanel):
+    class _Login(size.SizedPanel):
         def __init__(self,parent):
             # initialize our super class
             super(MyPanel._Login,self).__init__(parent)
@@ -142,6 +155,17 @@ class MyFrame(wx.Frame):
         self.panel = MyPanel(self)
         # bind evt to button to login
         self.Bind(wx.EVT_BUTTON,self.OnLogin,self.panel.login.button)
+        # flag to decide whether a user start a trial
+        self.flag = False
+        # check if database exists before recreating another
+        if not os.path.exists("Components/users.sqlite"):
+            # initialized database
+            utils.initDatabase("Components/users.sqlite")
+        else:
+            cur,conn,result = utils.getTrialInfo()
+            if result:
+                self.flag = True
+        
 
     def OnLogin(self,event):
         # retrieve password and username
@@ -150,10 +174,12 @@ class MyFrame(wx.Frame):
         print(username,password)
         # check login for validity
         if utils.checkLogin(username,password):
-            self.panel = LicensePanel(self)
-            self.panel.ShowModal()
-            self.Close()
-            
+            if not self.flag:
+                self.panel = LicensePanel(self)
+                self.panel.ShowModal()
+                self.Close()
+            # user subscribed to trial version
+            os.execlp("python3","python3","Components/MainWindow.py")
         else:
             self.panel.login.text.Label = "Error Login Please Check Your Details"
             self.panel.login.text.ForegroundColour  = "rgb(237,12,12)"

@@ -47,12 +47,12 @@ def initDatabase(file):
     connect.commit()
 
 # return information on trials day 
-def getTrialInfo(filename="users.sqlite"):
+def getTrialInfo(filename="./Components/users.sqlite"):
     conn = sqlite3.connect(filename)
     # get  db connection
     cursor = conn.cursor()
     # read our trial table
     cursor.execute("select istrial,days from trial")
-    return cursor.fetchone()
+    return cursor,conn,cursor.fetchone()
 
 
