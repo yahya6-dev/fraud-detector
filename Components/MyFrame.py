@@ -116,7 +116,7 @@ class MyPanel(wx.Panel):
         self.font.MakeBold()
         _,_,x,y = wx.Display().GetClientArea()
         # calculate image header size
-        xPos,yPos = x // 3, y // 2.5
+        xPos,yPos = x // 3, y // 2.4
         # set size imageheader
         self.imageHeader.SetInitialSize((xPos,-1))
         # our main panel sizer
@@ -124,7 +124,7 @@ class MyPanel(wx.Panel):
         # header sizer which assume horizontal 
         imagesizer = wx.BoxSizer(wx.HORIZONTAL)
         # add image as our header
-        imagesizer.Add(self.imageHeader,1,wx.ALL|wx.ALIGN_CENTRE_HORIZONTAL,4)
+        imagesizer.Add(self.imageHeader,1,wx.ALL,4)
         # add image sizer to our main sizer
         sizer.Add(imagesizer,0,wx.ALL,0)
         self.text = wx.StaticText(self,label="To Continue Log In")
@@ -143,7 +143,7 @@ class MyFrame(wx.Frame):
         _,_,x,y = wx.Display().GetClientArea()
         # calculate the center of our rect
         centerX = math.floor(x/3)
-        centerY = math.floor(y/2.5)
+        centerY = math.floor(y/2)
         # determine our login window size by subtracting from centerX and centerY
         self.SetInitialSize((centerX,centerY))
         # background color
