@@ -4,6 +4,51 @@ from utils import getTrialInfo
 from GroupSizer import GroupSizer
 from wx.lib import sized_controls as sized
 
+# our window for camera tools
+class CameraTools(wx.Panel):
+    def __init__(self,parent):
+        super(CameraTools,self).__init__(parent)
+        # add layout sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # target label
+        self.titleLabel = wx.StaticText(self,label="Camera Tools")
+        # config label font
+        font = wx.Font()
+        font.SetPointSize(16)
+        self.titleLabel.SetFont(font)
+        # set title appearance
+        self.titleLabel.ForegroundColour = "rgb(235,235,235)"
+        sliderSize,_ = self.titleLabel.GetSize()
+        # add slider to a panel
+        self.sliderPanel = wx.Panel(self,size=(sliderSize,-1))
+        # add slider to the panel
+        self.slider = wx.Slider(self.sliderPanel,minValue=0,maxValue=100)
+        # set slider appearance
+        self.sliderPanel.BackgroundColour = "rgb(31,31,31)"
+        # slider panel box sizer
+        sliderBoxSizer = wx.BoxSizer(wx.VERTICAL)
+        #sliderBoxSizer.Add(self.slider,1,wx.EXPAND)
+        # add slider title
+        self.sliderTitle = wx.StaticText(self.sliderPanel,label="Zoom")
+        sliderBoxSizer.Add(self.sliderTitle,0,wx.LEFT|wx.RIGHT|wx.TOP,4)
+        sliderBoxSizer.Add(self.slider,0,wx.EXPAND|wx.ALL,4)
+        # config slider panel sizer
+        self.sliderPanel.SetSizer(sliderBoxSizer)
+        sizer.Add(self.titleLabel,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,8)
+        # add panel to the main sizer
+        sizer.Add(self.sliderPanel,0,wx.ALL|wx.EXPAND,8)
+        
+        self.SetSizer(sizer)
+        # bind paint event to draw a line atop of title
+        self.Bind(wx.EVT_PAINT,self.OnPaint)
+
+    def OnPaint(self,event):
+        dc = wx.PaintDC(self)
+        x,y,w,h = self.titleLabel.GetRect()
+        color = "rgb(200,200,200)" 
+        dc.SetPen(wx.Pen(color,1))
+        dc.DrawLine(x,y,w+50,y)
+    
 # our image for displaying a single target
 class MyImage(wx.Panel):
     def __init__(self,parent,image,size,deleteButton,images):
@@ -122,8 +167,10 @@ class TargetScreen(wx.Panel):
             else:
                 child.isSelected = False
                 child.Destroy()
+                # custom utility to delete the image
         self.imageList.childs = results
         self.imageList.Refresh()
+        self.imageList.Update()
         self.deleteButton.Hide()
         self.images = results
         self.Refresh()
@@ -179,13 +226,13 @@ class MainWindowPanel(wx.Panel):
         #topLeft.AddItem(self.titleLabel,1,wx.ALL|wx.ALIGN_RIGHT,8)
         #camScreen = GroupSizer(self,wx.VERTICAL,"")
         self.targetScreen = TargetScreen(self)
-        topRight = GroupSizer(self,wx.VERTICAL,"")
+        self.topRight = CameraTools(self)
         # add camera component panel
         self.cameraComponent = CamPanel(self)
         # section to our main box sizer
         self.groupsizer.AddItem(self.targetScreen,1,wx.ALL|wx.EXPAND,8)
         self.groupsizer.AddItem(self.cameraComponent,3,wx.ALL|wx.EXPAND,8)
-        self.groupsizer.AddItem(topRight,1,wx.ALL,8)
+        self.groupsizer.AddItem(self.topRight,1,wx.ALL|wx.EXPAND,8)
         # add image list to our topleft screen
         #self.imageList = MyImageList(topLeft,["Components/assets/other.jpeg"])
         #topLeft.AddItem(self.imageList,1,wx.EXPAND|wx.ALL,8)
