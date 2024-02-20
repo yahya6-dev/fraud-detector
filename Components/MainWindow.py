@@ -4,6 +4,66 @@ from utils import getTrialInfo
 from GroupSizer import GroupSizer
 from wx.lib import sized_controls as sized
 
+# simple panel for representing play and stop camera functionalities
+class PlayPausedPanel(wx.Panel):
+    def __init__(self,parent,label,image):
+        super(PlayPausedPanel,self).__init__(parent)
+        # add sizer that default to vertical
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # add controls image and label
+        self.label = wx.StaticText(self,label=label)
+        self.image = wx.StaticBitmap(self,bitmap=wx.Bitmap(image))
+        # add controls to the sizer
+        sizer.Add(self.label,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,4)
+        sizer.Add(self.image,0,wx.EXPAND|wx.ALL,4)
+        # add sizer as layout sizer
+        self.SetSizer(sizer)
+
+class LabelAndImageHorizontal(wx.Panel):
+    def __init__(self,parent,image):
+        super(LabelAndImageHorizontal,self).__init__(parent)
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # add controls image 
+        self.image = wx.StaticBitmap(self,bitmap=wx.Bitmap(image))
+        # add radio button
+        self.radio = wx.CheckBox(self,size=(-1,32))
+        # add image to the hsizer
+        sizer.Add(self.image,0,wx.ALL,0)
+        sizer.Add(self.radio,0,wx.LEFT,4)
+        self.SetSizer(sizer)
+
+# panel containing controls for choosing either color image or gray image
+class FrameType(wx.Panel):
+    def __init__(self,parent):
+        super(FrameType,self).__init__(parent)
+        # config appearance 
+        self.BackgroundColour = "rgb(31,31,31)"
+        # add layout sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.label = wx.StaticText(self,label="Frame Type")
+        # add choice option
+        self.options = wx.RadioBox(self,choices=["Gray","Color"],style=wx.RA_SPECIFY_ROWS)
+        sizer.Add(self.label,0,wx.TOP|wx.LEFT|wx.RIGHT,4)
+        sizer.Add(self.options,0,wx.ALL,4)
+        # add sizer to the main layout
+        self.SetSizer(sizer)
+
+# AI enhancement section
+class AIEnhancer(wx.Panel):
+    def __init__(self,parent,label,image):
+        super(AIEnhancer,self).__init__(parent)
+         # add sizer that default to vertical
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.label = wx.StaticText(self,label=label)
+        imagePanel = LabelAndImageHorizontal(self,image)
+        # add controls to the sizer
+        sizer.Add(self.label,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.LEFT|wx.RIGHT|wx.TOP,4)
+        sizer.Add(imagePanel,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.BOTTOM,4)
+        # add sizer as layout sizer
+        self.SetSizer(sizer)
+
+
+        
 # our window for camera tools
 class CameraTools(wx.Panel):
     def __init__(self,parent):
@@ -34,10 +94,18 @@ class CameraTools(wx.Panel):
         sliderBoxSizer.Add(self.slider,0,wx.EXPAND|wx.ALL,4)
         # config slider panel sizer
         self.sliderPanel.SetSizer(sliderBoxSizer)
+        # add play pause control
+        self.play = PlayPausedPanel(self,"Play/Paused","Components/assets/play.png")
         sizer.Add(self.titleLabel,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,8)
+        self.enhancer = AIEnhancer(self,"AI Enhancer","Components/assets/eyeglasses.png")
+        # frame type controls
+        self.frameType = FrameType(self)
         # add panel to the main sizer
         sizer.Add(self.sliderPanel,0,wx.ALL|wx.EXPAND,8)
-        
+        # add play control to the sizer
+        sizer.Add(self.play,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,8)
+        sizer.Add(self.enhancer,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,8)
+        sizer.Add(self.frameType,1,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,8)
         self.SetSizer(sizer)
         # bind paint event to draw a line atop of title
         self.Bind(wx.EVT_PAINT,self.OnPaint)
@@ -123,7 +191,7 @@ class MyImageList(sized.SizedScrolledPanel):
         x,y,w,h = self.GetRect()
         dc.SetBrush(wx.Brush("rgb(51,51,51)"))
         dc.SetPen(wx.Pen("rgb(200,200,200)",1))
-        dc.DrawRectangle(x,y-32,w-32,h)
+        dc.DrawRectangle(x,y-32,w-32-1,h)
 
 # class that hold left screen that targets image list
 class TargetScreen(wx.Panel):
@@ -144,7 +212,7 @@ class TargetScreen(wx.Panel):
         font.MakeBold()
         self.titleLabel.SetFont(font)
         # image panel add to it
-        self.images = ["Components/assets/pic1.jpg","Components/assets/pic2.jpg",
+        self.images = ["Components/assets/pic1.jpg","Components/assets/pick4.jpg",
             "Components/assets/pic3.jpg","Components/assets/pick4.jpg"]
         x,y = self.TopLevelParent.GetSize()
         print(x,y,"of the parent")
@@ -212,6 +280,61 @@ class CamPanel(wx.Panel):
         sizer.Add(self.image,9,wx.TOP|wx.EXPAND,0)
         self.SetSizer(sizer)
 
+# this panel contain various UI for controlling the target
+class MainControl(wx.Panel):
+    def __init__(self,parent):
+        super(MainControl,self).__init__(parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.targetControl = TargetControl(self)
+        # target control to the sizer
+        sizer.Add(self.targetControl,0,wx.ALL,8)
+        self.SetSizer(sizer)
+        self.Bind(wx.EVT_PAINT,self.OnPaint)
+
+    def OnPaint(self,event):
+        dc = wx.PaintDC(self)
+        x,y,w,h = self.GetRect()
+        # pencil and brush color
+        dc.SetBrush(wx.Brush("rgb(200,220,200)"))
+        dc.SetPen(wx.Pen("rgb(220,220,220)"))
+        # draw rectangle
+        print("I cant see anymore")
+        dc.DrawRectangle(x,y,w,h)
+
+# Target Control UI, for setting and moving frame
+class TargetControl(wx.Panel):
+    def __init__(self,parent):
+        super(TargetControl,self).__init__(parent)
+        # buttons for moving around target
+        self.btLeft = wx.StaticBitmap(self,bitmap=wx.Bitmap("Components/assets/left.png"))
+        self.btRight = wx.StaticBitmap(self,bitmap=wx.Bitmap("Components/assets/right.png"))
+        self.btTop = wx.StaticBitmap(self,bitmap=wx.Bitmap("Components/assets/up.png"))
+        self.btBottom = wx.StaticBitmap(self,bitmap=wx.Bitmap("Components/assets/down.png"))
+        # main layout sizer
+        vsizer = wx.BoxSizer(wx.VERTICAL)
+        # hsizer for vertical alignment
+        hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        # vsizer as the main sizer
+        self.SetSizer(vsizer)
+
+        # bind to paint event to draw the rectangle
+        #self.Bind(wx.EVT_PAINT,self.OnPaint)
+
+    def OnPaint(self,event):
+        dc = wx.PaintDC(self)
+        x,y = self.GetSize()
+        x1,y1,w,_h = self.GetRect()
+        normalizedHeight = y - 16 - 32 - 64
+        # rectangle starting offset
+        startYOffset = y1 - 28
+        startXOffset = x1 - 8
+        endYOffset = startYOffset
+        endXOffset =  w // 10
+        # set pencil color
+        dc.SetPen(wx.Pen("rgb(220,220,220)",2))
+        dc.SetBrush(wx.Brush("rgb(51,255,255)"))
+        dc.DrawRectangle(startXOffset,startYOffset,endXOffset,endYOffset)
+
 class MainWindowPanel(wx.Panel):
     def __init__(self,parent):
         # get our superclass ready
@@ -220,11 +343,8 @@ class MainWindowPanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         # add group sizer
         self.groupsizer = GroupSizer(self,wx.HORIZONTAL,"")
-        bottomSizer = GroupSizer(self,wx.HORIZONTAL,"")
+        self.bottomSection = MainControl(self)
         # add item to the top sizer
-        # topLeft = GroupSizer(self,wx.VERTICAL,"")
-        #topLeft.AddItem(self.titleLabel,1,wx.ALL|wx.ALIGN_RIGHT,8)
-        #camScreen = GroupSizer(self,wx.VERTICAL,"")
         self.targetScreen = TargetScreen(self)
         self.topRight = CameraTools(self)
         # add camera component panel
@@ -238,7 +358,7 @@ class MainWindowPanel(wx.Panel):
         #topLeft.AddItem(self.imageList,1,wx.EXPAND|wx.ALL,8)
         # add toplevel section to main sizer
         sizer.Add(self.groupsizer.sizer,3,wx.EXPAND|wx.ALL,8)
-        sizer.Add(bottomSizer,1,wx.EXPAND|wx.ALL,8)
+        sizer.Add(self.bottomSection,1,wx.EXPAND|wx.ALL,8)
         self.SetSizer(sizer)
      
 
