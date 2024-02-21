@@ -18,6 +18,102 @@ class PlayPausedPanel(wx.Panel):
         sizer.Add(self.image,0,wx.EXPAND|wx.ALL,4)
         # add sizer as layout sizer
         self.SetSizer(sizer)
+# simple class with label and image vertically aligned
+class LabelAndImageVertical(wx.Panel):
+    def __init__(self,parent,label,image):
+        super(LabelAndImageVertical,self).__init__(parent)
+        # add vertical sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # add controls
+        self.label = wx.StaticText(self,label=label)
+        font = wx.Font()
+        font.SetPointSize(8)
+        self.label.SetFont(font)
+        self.image = wx.Image(image)
+        self.image.Rescale(48,48)
+        self.bitmap = wx.Bitmap(self.image)
+        self.imageCtrl = wx.StaticBitmap(self,bitmap=self.bitmap)
+
+        # ad controls to the sizer
+        sizer.Add(self.label,0,wx.ALL,2)
+        sizer.Add(self.imageCtrl,0,wx.ALL,2)
+        self.SetSizer(sizer)
+
+# Panel representing tracking type
+class TrackingTypePanel(wx.Panel):
+    def __init__(self,parent):
+        super(TrackingTypePanel,self).__init__(parent)
+        # layout sizer
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # add controls
+        self.fullBody = LabelAndImageVertical(self,"Full Body","Components/assets/person-fill3.png")
+        self.upperBody = LabelAndImageVertical(self,"Top Body","Components/assets/person-fill1.png")
+        self.face = LabelAndImageVertical(self,"Face","Components/assets/person-fill2.png")
+        self.offTracking = LabelAndImageVertical(self,"Off","Components/assets/power.png")
+
+        # add controls to the sizer
+        sizer.Add(self.fullBody,0,wx.LEFT,8)
+        sizer.Add(self.upperBody,0,wx.LEFT,8)
+        sizer.Add(self.face,0,wx.LEFT,8)
+        sizer.Add(self.offTracking,0,wx.LEFT,8)
+
+        self.SetSizer(sizer)
+
+# main panel carrying target options such as search
+class TargetOption(wx.Panel):
+    def __init__(self,parent):
+        super(TargetOption,self).__init__(parent)
+        # add layout sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        self.searchBottom = wx.Button(self,label="Search Target")
+        font = wx.Font()
+        font.MakeBold()
+        self.searchBottom.SetFont(font)
+        self.searchBottom.ForegroundColour = "rgb(250,250,250)"
+        self.liveRecognition = wx.Button(self,label="Add To Live Recognition")
+        self.liveRecognition.BackgroundColour ="rgb(38,124,254)"
+        self.liveRecognition.ForegroundColour = "rgb(250,250,250)"
+        # add controls to the sizer
+        sizer.Add(self.searchBottom,0,wx.ALL|wx.ALIGN_CENTRE_HORIZONTAL,4)
+        sizer.Add(self.liveRecognition,0,wx.ALL|wx.EXPAND,4)
+        # set panel appearance
+        self.BackgroundColour = "rgb(31,31,31)"
+        # set layout sizer
+        self.SetSizer(sizer)
+
+# parent panel carrying targetoption and label
+class TargetOptionPanel(wx.Panel):
+    def __init__(self,parent):
+        super(TargetOptionPanel,self).__init__(parent)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # add controls
+        self.targetOptions = TargetOption(self)
+        self.label = wx.StaticText(self,label="Target Options")
+        # add all of the controls
+        sizer.Add(self.label,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,4)
+        sizer.Add(self.targetOptions,0,wx.ALL,4)
+
+        self.SetSizer(sizer)
+        
+# main panel containing tracking panel
+class TrackingPanel(wx.Panel):
+    def __init__(self,parent):
+        super(TrackingPanel,self).__init__(parent)
+        # add layout sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # add controls
+        self.label = wx.StaticText(self,label="Tracking Type")
+        self.label.ForegroundColour = "rgb(255,255,255)"
+        font = wx.Font()
+        font.SetPointSize(14)
+        self.label.SetFont(font)
+        # add main TrackingTypePanel
+        self.tracking = TrackingTypePanel(self)
+        # add them to the sizer
+        sizer.Add(self.label,0,wx.ALL|wx.ALIGN_CENTRE_HORIZONTAL,8)
+        sizer.Add(self.tracking,0,wx.EXPAND|wx.ALL,8)
+
+        self.SetSizer(sizer)
 
 class LabelAndImageHorizontal(wx.Panel):
     def __init__(self,parent,image):
@@ -63,7 +159,44 @@ class AIEnhancer(wx.Panel):
         self.SetSizer(sizer)
 
 
-        
+# selected target panel
+class SelectedTargetPanel(wx.Panel):
+    def __init__(self,parent):
+        super(SelectedTargetPanel,self).__init__(parent)
+        # main layout sizer
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        # add controls
+        self.label = wx.StaticText(self,label="Selected Target")
+        self.image = wx.Image("Components/assets/third.jpg")
+        # rescale image size
+        self.image.Rescale(100,100)
+        self.imageCtrl = wx.StaticBitmap(self,bitmap=wx.Bitmap(self.image))
+        # set label font
+        font = wx.Font()
+        font.MakeBold()
+        #font.SetPointSize(16)
+        self.label.SetFont(font)
+        # add controls to the main sizer
+        sizer.Add(self.label,0,wx.EXPAND|wx.ALL,8)
+        sizer.Add(self.imageCtrl,0,wx.ALL,8)
+        self.SetSizer(sizer)
+        # bind to Paint Event
+        self.Bind(wx.EVT_PAINT,self.OnPaint)
+       
+
+    def OnPaint(self,event):
+        dc = wx.PaintDC(self)
+        x,y,w,h = self.label.GetRect()
+        # draw line
+        dc.SetBrush(wx.Brush("rgb(51,51,51)"))
+        dc.SetPen(wx.Pen("rgb(180,180,180)",2))
+        dc.DrawLine(x,y,x+150,y)
+        x,y,w,h = self.imageCtrl.GetRect()
+        w,h = self.imageCtrl.GetSize()
+        dc.SetPen(wx.Pen("rgb(237,12,12)"))
+        dc.DrawRectangle(x-1,y-1,w+2,h+2)
+        self.Refresh()
+
 # our window for camera tools
 class CameraTools(wx.Panel):
     def __init__(self,parent):
@@ -280,60 +413,88 @@ class CamPanel(wx.Panel):
         sizer.Add(self.image,9,wx.TOP|wx.EXPAND,0)
         self.SetSizer(sizer)
 
-# this panel contain various UI for controlling the target
+# main control panel
+class MainControlPanel(wx.Panel):
+    def __init__(self,parent):
+        super(MainControlPanel,self).__init__(parent)
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.mainControl = MainControl(self)
+        self.selectedTarget = SelectedTargetPanel(self)
+        self.trackingPanel = TrackingPanel(self)
+        self.targetOption = TargetOptionPanel(self)
+        sizer.Add(self.mainControl,0,wx.EXPAND,0)
+        sizer.AddSpacer(10)
+        # add selectedTarget panel to the main sizer
+        sizer.Add(self.selectedTarget,0,wx.EXPAND,0)
+        sizer.AddStretchSpacer()
+        sizer.Add(self.trackingPanel,0,wx.ALIGN_RIGHT|wx.ALL,8)
+        sizer.Add(self.targetOption,0,wx.ALIGN_RIGHT|wx.ALL,8)
+        
+        # add sizer
+        self.SetSizer(sizer)
+
+
+# this panel contain various UI for controlling the position target
 class MainControl(wx.Panel):
     def __init__(self,parent):
         super(MainControl,self).__init__(parent)
         sizer = wx.BoxSizer(wx.VERTICAL)
+        self.label = wx.StaticText(self,label="Set Target Position")
+        # label atop of targetControl 
+        sizer.Add(self.label,0,wx.LEFT|wx.TOP,8)
         self.targetControl = TargetControl(self)
         # target control to the sizer
         sizer.Add(self.targetControl,0,wx.ALL,8)
+        self.label = wx.StaticText(self,label="")
+        sizer.Add(self.label,0,wx.ALL,8)
         self.SetSizer(sizer)
         self.Bind(wx.EVT_PAINT,self.OnPaint)
 
     def OnPaint(self,event):
         dc = wx.PaintDC(self)
-        x,y,w,h = self.GetRect()
+        """x,y,w,h = self.GetRect()
+        x,y,_,_ = self.label.GetRect()
         # pencil and brush color
-        dc.SetBrush(wx.Brush("rgb(200,220,200)"))
+        dc.SetBrush(wx.Brush("rgb(51,51,51)"))
         dc.SetPen(wx.Pen("rgb(220,220,220)"))
         # draw rectangle
-        print("I cant see anymore")
-        dc.DrawRectangle(x,y,w,h)
+        print("I cant see anymore",x,y,w,h)
+        dc.DrawRectangle(x-8,y-120-32-16,w+200,h-8)
+        """
+        x,y,w,h = self.targetControl.GetRect()
+        # set pencil color
+        dc.SetPen(wx.Pen("rgb(180,180,180)",1))
+        dc.SetBrush(wx.Brush("rgb(31,31,31)"))
+        dc.DrawRectangle(x,y-6,120,120)
+        # refresh the panel
+        self.Refresh()
 
 # Target Control UI, for setting and moving frame
 class TargetControl(wx.Panel):
     def __init__(self,parent):
         super(TargetControl,self).__init__(parent)
         # buttons for moving around target
-        self.btLeft = wx.StaticBitmap(self,bitmap=wx.Bitmap("Components/assets/left.png"))
-        self.btRight = wx.StaticBitmap(self,bitmap=wx.Bitmap("Components/assets/right.png"))
-        self.btTop = wx.StaticBitmap(self,bitmap=wx.Bitmap("Components/assets/up.png"))
-        self.btBottom = wx.StaticBitmap(self,bitmap=wx.Bitmap("Components/assets/down.png"))
+        self.btLeft = wx.BitmapButton(self,bitmap=wx.Bitmap("Components/assets/left.png"),size=(32,32))
+        self.btRight = wx.BitmapButton(self,bitmap=wx.Bitmap("Components/assets/right.png"),size=(32,32))
+        self.btTop = wx.BitmapButton(self,bitmap=wx.Bitmap("Components/assets/up.png"),size=(32,32))
+        self.btBottom = wx.BitmapButton(self,bitmap=wx.Bitmap("Components/assets/down.png"),size=(32,32))
+        self.setTarget = wx.BitmapButton(self,bitmap=wx.Bitmap("Components/assets/plus.png"),size=(32,32))
+        self.SetInitialSize((120,120))
         # main layout sizer
         vsizer = wx.BoxSizer(wx.VERTICAL)
+        vsizer.Add(self.btTop,0,wx.ALL|wx.ALIGN_TOP|wx.ALIGN_CENTRE_HORIZONTAL,2)
         # hsizer for vertical alignment
         hsizer = wx.BoxSizer(wx.HORIZONTAL)
+        # add items horixontally 
+        hsizer.Add(self.btLeft,0,wx.LEFT|wx.RIGHT|wx.TOP|wx.ALIGN_LEFT,2)
+        hsizer.Add(self.setTarget,0,wx.LEFT|wx.RIGHT|wx.TOP|wx.ALIGN_CENTRE_HORIZONTAL,2)
+        hsizer.Add(self.btRight,0,wx.LEFT|wx.RIGHT|wx.TOP|wx.ALIGN_RIGHT,2)
+        vsizer.Add(hsizer,0,wx.ALIGN_CENTRE_HORIZONTAL,0)
+        vsizer.Add(self.btBottom,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.TOP,4)
         # vsizer as the main sizer
         self.SetSizer(vsizer)
 
-        # bind to paint event to draw the rectangle
-        #self.Bind(wx.EVT_PAINT,self.OnPaint)
-
-    def OnPaint(self,event):
-        dc = wx.PaintDC(self)
-        x,y = self.GetSize()
-        x1,y1,w,_h = self.GetRect()
-        normalizedHeight = y - 16 - 32 - 64
-        # rectangle starting offset
-        startYOffset = y1 - 28
-        startXOffset = x1 - 8
-        endYOffset = startYOffset
-        endXOffset =  w // 10
-        # set pencil color
-        dc.SetPen(wx.Pen("rgb(220,220,220)",2))
-        dc.SetBrush(wx.Brush("rgb(51,255,255)"))
-        dc.DrawRectangle(startXOffset,startYOffset,endXOffset,endYOffset)
+        
 
 class MainWindowPanel(wx.Panel):
     def __init__(self,parent):
@@ -343,7 +504,7 @@ class MainWindowPanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         # add group sizer
         self.groupsizer = GroupSizer(self,wx.HORIZONTAL,"")
-        self.bottomSection = MainControl(self)
+        self.bottomSection = MainControlPanel(self)
         # add item to the top sizer
         self.targetScreen = TargetScreen(self)
         self.topRight = CameraTools(self)
@@ -360,7 +521,15 @@ class MainWindowPanel(wx.Panel):
         sizer.Add(self.groupsizer.sizer,3,wx.EXPAND|wx.ALL,8)
         sizer.Add(self.bottomSection,1,wx.EXPAND|wx.ALL,8)
         self.SetSizer(sizer)
-     
+        self.Bind(wx.EVT_PAINT,self.OnPaint)
+
+    def OnPaint(self,event):
+        dc = wx.PaintDC(self)
+        x,y,w,h = self.bottomSection.GetRect()
+        dc.SetPen(wx.Pen("rgb(180,180,180)"))
+        dc.SetBrush(wx.Brush("rgb(51,51,51)"))
+        dc.DrawRectangle(x,y,w,h)
+        self.Refresh()
 
 class MyWindow(wx.Frame):
     def __init__(self,parent,title):
