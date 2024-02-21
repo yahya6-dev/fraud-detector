@@ -3,6 +3,7 @@ import wx,math
 from utils import getTrialInfo
 from GroupSizer import GroupSizer
 from wx.lib import sized_controls as sized
+import os
 
 # simple panel for representing play and stop camera functionalities
 class PlayPausedPanel(wx.Panel):
@@ -10,17 +11,35 @@ class PlayPausedPanel(wx.Panel):
         super(PlayPausedPanel,self).__init__(parent)
         # add sizer that default to vertical
         sizer = wx.BoxSizer(wx.VERTICAL)
+        # check if is playing
+        self.flag = False
         # add controls image and label
         self.label = wx.StaticText(self,label=label)
-        self.image = wx.StaticBitmap(self,bitmap=wx.Bitmap(image))
+        self.playImage = wx.Image(image)
+        self.image = wx.StaticBitmap(self,bitmap=wx.Bitmap(self.playImage))
+        self.pausedImage = wx.Image("Components/assets/pause.png")
         # add controls to the sizer
         sizer.Add(self.label,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,4)
         sizer.Add(self.image,0,wx.EXPAND|wx.ALL,4)
         # add sizer as layout sizer
         self.SetSizer(sizer)
+        self.image.SetEvtHandlerEnabled(True)
+        self.image.Bind(wx.EVT_LEFT_UP,self.OnLeftClick)
+
+    def OnLeftClick(self,event):
+        self.flag = not self.flag
+        # alternate btw playing and paused image
+        if self.flag:
+            self.image.SetBitmap(wx.Bitmap(self.pausedImage))
+            # send special request to stop receiving data
+        else:
+            self.image.SetBitmap(wx.Bitmap(self.playImage))
+            # send special request to continue receiving data
+        self.Refresh()
+        print("Why Dont Run")
 # simple class with label and image vertically aligned
 class LabelAndImageVertical(wx.Panel):
-    def __init__(self,parent,label,image):
+    def __init__(self,parent,label,image,image2):
         super(LabelAndImageVertical,self).__init__(parent)
         # add vertical sizer
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -31,13 +50,27 @@ class LabelAndImageVertical(wx.Panel):
         self.label.SetFont(font)
         self.image = wx.Image(image)
         self.image.Rescale(48,48)
+        self.imageSel = wx.Image(image2)
+        self.imageSel.Rescale(48,48)
         self.bitmap = wx.Bitmap(self.image)
         self.imageCtrl = wx.StaticBitmap(self,bitmap=self.bitmap)
-
+        # indicator of wheher it is selected
+        self.flag = False
         # ad controls to the sizer
         sizer.Add(self.label,0,wx.ALL,2)
         sizer.Add(self.imageCtrl,0,wx.ALL,2)
         self.SetSizer(sizer)
+        self.imageCtrl.SetEvtHandlerEnabled(True)
+        self.imageCtrl.Bind(wx.EVT_LEFT_UP,self.OnLeftClick)
+
+    def OnLeftClick(self,event):
+        self.flag = not self.flag
+        if self.flag:
+            self.imageCtrl.SetBitmap(wx.Bitmap(self.imageSel))
+        else:
+            self.imageCtrl.SetBitmap(wx.Bitmap(self.image))
+        self.Refresh()
+        # apropriate handlers for such event
 
 # Panel representing tracking type
 class TrackingTypePanel(wx.Panel):
@@ -46,10 +79,10 @@ class TrackingTypePanel(wx.Panel):
         # layout sizer
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         # add controls
-        self.fullBody = LabelAndImageVertical(self,"Full Body","Components/assets/person-fill3.png")
-        self.upperBody = LabelAndImageVertical(self,"Top Body","Components/assets/person-fill1.png")
-        self.face = LabelAndImageVertical(self,"Face","Components/assets/person-fill2.png")
-        self.offTracking = LabelAndImageVertical(self,"Off","Components/assets/power.png")
+        self.fullBody = LabelAndImageVertical(self,"Full Body","Components/assets/person-fill3.png","Components/assets/person-fill3-sel.png")
+        self.upperBody = LabelAndImageVertical(self,"Top Body","Components/assets/person-fill1.png","Components/assets/person-fill1-sel.png")
+        self.face = LabelAndImageVertical(self,"Face","Components/assets/person-fill2.png","Components/assets/person-fill2-sel.png")
+        self.offTracking = LabelAndImageVertical(self,"Off","Components/assets/power.png","Components/assets/power-sel.png")
 
         # add controls to the sizer
         sizer.Add(self.fullBody,0,wx.LEFT,8)
@@ -177,7 +210,7 @@ class SelectedTargetPanel(wx.Panel):
         #font.SetPointSize(16)
         self.label.SetFont(font)
         # add controls to the main sizer
-        sizer.Add(self.label,0,wx.EXPAND|wx.ALL,8)
+        sizer.Add(self.label,0,wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,8)
         sizer.Add(self.imageCtrl,0,wx.ALL,8)
         self.SetSizer(sizer)
         # bind to Paint Event
@@ -205,6 +238,9 @@ class CameraTools(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         # target label
         self.titleLabel = wx.StaticText(self,label="Camera Tools")
+        img = wx.Image("Components/assets/power1.png")
+        img.Rescale(20,20)
+        self.close = wx.BitmapButton(self,name="Exit",bitmap=wx.Bitmap(img))
         # config label font
         font = wx.Font()
         font.SetPointSize(16)
@@ -242,7 +278,7 @@ class CameraTools(wx.Panel):
         self.SetSizer(sizer)
         # bind paint event to draw a line atop of title
         self.Bind(wx.EVT_PAINT,self.OnPaint)
-
+        self.close.Bind(wx.EVT_BUTTON,lambda event: self.TopLevelParent.Close())
     def OnPaint(self,event):
         dc = wx.PaintDC(self)
         x,y,w,h = self.titleLabel.GetRect()
@@ -264,7 +300,8 @@ class MyImage(wx.Panel):
         self.images = images
         self.image = wx.Image(image)
         self.image.Rescale(250-32-24-8,200-32)
-        self.image = wx.StaticBitmap(self,bitmap=wx.Bitmap(self.image))
+        self.bitmap = wx.Bitmap(self.image)
+        self.image = wx.StaticBitmap(self,bitmap=self.bitmap)
         # set cursor image on hovering
         self.image.SetCursor(wx.Cursor("Components/assets/cursor.png"))
         sizer.Add(self.image,0,wx.ALL,8)
@@ -293,7 +330,7 @@ class MyImage(wx.Panel):
             self.deleteButton.Show()
         elif self.deleteButton.IsShown() and not self.isSelected and not any(allImages):
             self.deleteButton.Hide()
-
+    
         self.Refresh()
         print("Hello What happened")
     
@@ -345,8 +382,7 @@ class TargetScreen(wx.Panel):
         font.MakeBold()
         self.titleLabel.SetFont(font)
         # image panel add to it
-        self.images = ["Components/assets/pic1.jpg","Components/assets/pick4.jpg",
-            "Components/assets/pic3.jpg","Components/assets/pick4.jpg"]
+        self.images = ["Components/assets/targets/"+target for target in os.listdir("Components/assets/targets")]
         x,y = self.TopLevelParent.GetSize()
         print(x,y,"of the parent")
         self.imageList = MyImageList(self,self.images,(x-16,math.floor(y/1.2)),self.deleteButton)
@@ -367,8 +403,9 @@ class TargetScreen(wx.Panel):
                 results.append(child)
             else:
                 child.isSelected = False
-                child.Destroy()
+                child.Hide()
                 # custom utility to delete the image
+        self.imageList.Layout()
         self.imageList.childs = results
         self.imageList.Refresh()
         self.imageList.Update()
