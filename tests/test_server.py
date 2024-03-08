@@ -11,11 +11,11 @@ import cv2,zlib
 class TestServerAuthentication(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.serverAddr = ("",8000)
+        cls.serverAddr = ("",9000)
         cls.MAXBUFF = 1024
         pid = os.fork()
         if pid == 0:
-            server = Server1("",8000,0,db="server-users.sql")
+            server = Server1("",9000,0,db="server-users.sql")
             server.run()
         else:
             cls.pid = pid
@@ -53,6 +53,31 @@ class TestServerAuthentication(unittest.TestCase):
         size = [1000,1000]
         client.send(pickle.dumps(size))
         reply = client.recv(self.MAXBUFF)
+        # sending response after sending screen size
+        client.send(Server1.SUCCESS)
         print(reply,"After sending screen configuration")
         self.assertTrue(reply == Server1.SUCCESS)
+
+        # receive streaming server info
+        reply = client.recv(self.MAXBUFF)
+        fps,streamServerAddress = pickle.loads(reply)
+        self.assertTrue(fps != None)
+        print("streaming server fps and address",fps,streamServerAddress)
+        client.send(Server1.SUCCESS)
+
+        reply = client.recv(self.MAXBUFF)
+        print("server reply for cmd")
+        client.send(Server1.GET_CAMERA_1)
+        reply = client.recv(self.MAXBUFF)
+
+        # send a new request to shutdown
+        client.send(Server1.SERVER_SHUTDOWN)
+        clientStreamSock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        clientStreamSock.connect(streamServerAddress)
+        print(clientStreamSock.getpeername(),"client connect to udp streaming server")
+        clientStreamSock.close()
         client.close()
+
+
+    def recvFrame(self,clientStreamSock):
+        pass

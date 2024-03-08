@@ -27,11 +27,16 @@ class Server1:
     SERVER_STOP = b"STOP"
     AUTH_NEEDED = b"ERROR_AUTH_NEEDED"
     AUTH_SUCCESS = b"AUTH_SUCCESS"
+    SERVER_FRAME_TYPE = b"FRAME_TYPE"
+    SERVER_QUERY_CMD = b"QUERY_CMD"
 
     def __init__(self,host,port,camera1,camera2=None,db=None):
         # main socket that normally clients connect to
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.sock.bind((host,port))
+        # socket for streaming frame
+        self.streamingServer = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        self.streamingServer.bind((host,7000))
         # internal server sock for connecting to the second server TCP
         self.serverSock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         # list of camera that normally the server serve
@@ -125,69 +130,53 @@ class Server1:
         # compensate for the slow moving
         self.fps += 2
 
+    def internalCMDHandler(self,sock,cmds):
+        SHUTDOWN = cmds[Server1.SERVER_SHUTDOWN]
+
+        while True and not SHUTDOWN:
+            sock.send(Server1.SERVER_QUERY_CMD)
+            reply = sock.recv(self.MAXBUFF)
+            print("User Request ",reply,"COMMAND")
+            # decode reply
+            if reply != b"":
+                current_query = cmds[reply]
+                for key in cmds:
+                    cmds[key] = 0
+
+                cmds[reply] = 1
+
+            SHUTDOWN = cmds[Server1.SERVER_SHUTDOWN]
+
+        sock.close()
+    
+
 
     def handleClient(self,sock):
         """ target client screen size """
+        def streamClient(address):
+            # current user query
+            current_cmd = 
         width,height = self.getClientConfiguration(sock)
+        authorized_client = sock.getpeername()
         # receive request which camera to serve
-        CAMERA_CMDS = [Server1.GET_CAMERA_1,Server1.GET_CAMERA_3,Server1.GET_CAMERA_2,Server1.SERVER_SHUTDOWN]    
+        CAMERA_CMDS = {Server1.GET_CAMERA_1:0,Server1.GET_CAMERA_3:0,Server1.GET_CAMERA_2:0,
+                        Server1.SERVER_SHUTDOWN:0,Server1.SERVER_STOP:0,
+                        }
         print("client screen size",width,height)
+
+        reply = sock.recv(self.MAXBUFF)
+        print(sock.getpeername(),"Status after sending screen size")
+        # information on the udp server for streaming the video
+        streamServerInfo = [self.fps,("",7000)]
+        # send server information
+        sock.send(pickle.dumps(streamServerInfo))
+        # server reply
+        reply = sock.recv(self.MAXBUFF)
+        print("reply after sending to a client streaming server info",reply)
+        # starting new thread
+        self.internalCMDHandler(sock,CAMERA_CMDS)
         sock.close()
         os._exit(0)
-        """
-        if response in CAMERA_CMDS:
-            if response == Server1.GET_CAMERA_3:
-                while True:
-                    frames = []
-                    success,frame = self.cam0.read()
-                    # check if we're successfully
-                    if success:
-                        frame = np.resize(frame,(width,height))
-                        frames.append(frame)
-
-                    if hasattr(self,"cam1"):
-                        success0, frame0 = self.cam1.read()
-                        # adjust frame size to send to the client
-                        if success0:
-                            frame0 = np.resize(fram0,(width,height))
-                            frames.append(frame0)                        
-                        # serialized data
-                        frame = zlib.compress(pickle.dumps(frames),9)
-                        self.sendData(sock,frames)
-                        
-            # in case serve camera one to the client
-            elif response == Server1.GET_CAMERA_1:
-                while True:
-                    success,frame = self.cam0.read()
-                    # check if we're successfully
-                    if success:
-                        #frame = np.resize(frame,(width,height))
-                        # serialized data
-                        frame = zlib.compress(pickle.dumps(frame),9)
-                        #print(frame,"compressed")
-                        self.sendData(sock,frame)
-
-                        
-                        #try:
-                         #   reply = sock.recv(self.MAXBUFF)
-                        #except:
-                         #   print("exception happened here")                        
-                        
-                        #sock.close()
-
-            # in case serve camera two to the client
-            elif response == Server1.GET_CAMERA_2:
-                success,frame = self.cam0.read()
-                # check if we're successfully
-                if success:
-                    # frame = np.resize(frame,(width,height))                        
-                    # serialized data
-                    frame = zlib.compress(pickle.dumps(frame),9)
-                    self.sendData(sock,frame)
-
-            elif Server1.SHUTDOWN:
-                sock.close()
-                self.sock.shutdown()"""
 
     def auth(self,sock):
         """ verify user """
@@ -212,9 +201,11 @@ class Server1:
         pass
 
     def sendData(self,sock,data):
+        MAXBUFF = 1024 * 6
+
         rest = None
         while data:
-            data,rest = data[self.MAXBUFF:],data[:self.MAXBUFF]
+            data,rest = data[MAXBUFF:],data[:MAXBUFF]
             sock.send(rest)
         sock.send(Server1.END_OF_FRAME)
 
