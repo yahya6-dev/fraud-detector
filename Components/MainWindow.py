@@ -43,6 +43,8 @@ class LabelAndImageVertical(wx.Panel):
         super(LabelAndImageVertical,self).__init__(parent)
         # add vertical sizer
         sizer = wx.BoxSizer(wx.VERTICAL)
+        # images list reference
+        self.images = []
         # add controls
         self.label = wx.StaticText(self,label=label)
         font = wx.Font()
@@ -66,6 +68,11 @@ class LabelAndImageVertical(wx.Panel):
     def OnLeftClick(self,event):
         self.flag = not self.flag
         if self.flag:
+            # deselect all other images
+            for image in self.images:
+                image.flag = False
+                image.imageCtrl.SetBitmap(image.bitmap)
+                image.Refresh()
             self.imageCtrl.SetBitmap(wx.Bitmap(self.imageSel))
         else:
             self.imageCtrl.SetBitmap(wx.Bitmap(self.image))
@@ -82,8 +89,11 @@ class TrackingTypePanel(wx.Panel):
         self.fullBody = LabelAndImageVertical(self,"Full Body","Components/assets/person-fill3.png","Components/assets/person-fill3-sel.png")
         self.upperBody = LabelAndImageVertical(self,"Top Body","Components/assets/person-fill1.png","Components/assets/person-fill1-sel.png")
         self.face = LabelAndImageVertical(self,"Face","Components/assets/person-fill2.png","Components/assets/person-fill2-sel.png")
-        self.offTracking = LabelAndImageVertical(self,"Off","Components/assets/power.png","Components/assets/power-sel.png")
-
+        self.offTracking = LabelAndImageVertical(self,"Off","Components/assets/power-sel.png","Components/assets/power.png")
+        # fields to store reference to all images
+        self.images = [self.fullBody,self.upperBody,self.face,self.offTracking]
+        # pass the images reference to the images
+        self.fullBody.images = self.upperBody.images = self.face.images = self.offTracking.images = self.images 
         # add controls to the sizer
         sizer.Add(self.fullBody,0,wx.LEFT,8)
         sizer.Add(self.upperBody,0,wx.LEFT,8)
@@ -431,10 +441,14 @@ class CamPanel(wx.Panel):
         # slit cam screen into two
         # buttons for switching
         self.bt1 = wx.ToggleButton(self,label="Playback")
-        self.bt2 = wx.ToggleButton(self,label="Live Camera")
+        self.bt2 = wx.ToggleButton(self,label="Live Camera 0")
+        self.bt3 = wx.ToggleButton(self,label="Live Camera 1")
+        self.bt4 = wx.ToggleButton(self,label="Main View")
         # set bts colour
         self.bt1.ForegroundColour = "rgb(255,255,255)"
         self.bt2.ForegroundColour = "rgb(255,255,255)"
+        self.bt3.ForegroundColour = "rgb(255,255,255)"
+        self.bt4.ForegroundColour = "rgb(255,255,255)"
         self.BackgroundColour = "rgb(200,200,200)"
         # get panel size
         x,y = self.TopLevelParent.GetSize()
@@ -444,10 +458,41 @@ class CamPanel(wx.Panel):
         # buttons sizer
         buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
         buttonSizer.Add(self.bt1,1,wx.LEFT|wx.BOTTOM,16)
-        buttonSizer.Add(self.bt2,1,wx.RIGHT|wx.BOTTOM,16)
+        buttonSizer.Add(self.bt2,1,wx.BOTTOM,16)
+
+        buttonSizer.Add(self.bt3,1,wx.BOTTOM,16)
+        buttonSizer.Add(self.bt4,1,wx.RIGHT|wx.BOTTOM,16)
         # add buttonsizer to the mainsizer
         sizer.Add(buttonSizer,1,wx.ALL|wx.EXPAND,0)
         sizer.Add(self.image,9,wx.TOP|wx.EXPAND,0)
+        self.SetSizer(sizer)
+
+        # add event listener to the live camera and playback button
+        self.Bind(wx.EVT_TOGGLEBUTTON,self.OnButton1Click,self.bt1)
+        self.Bind(wx.EVT_TOGGLEBUTTON,self.OnButton2Click,self.bt2)
+
+    def OnButton1Click(self,event):
+        print(event.EventObject.Value,"Button 1")
+        self.bt2.Value = False
+        self.bt3.Value = False
+        self.bt4.Value = False
+
+    def OnButton2Click(self,event):
+        print(event.EventObject.Value,"Button 2")
+        self.bt1.Value = False
+        self.bt3.Value = False
+        self.bt4.Value = False
+        
+# panel containing detect motion options
+class TrackingOption(wx.Panel):
+    def __init__(self,parent):
+        super(TrackingOption,self).__init__(parent)
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # add radio box 
+        self.radioBox = wx.RadioBox(self,choices=["Detect Motion","Track Target","None"],label="Tracking Options")
+        # add box to the sizer
+        sizer.Add(self.radioBox,0,wx.ALIGN_CENTRE_VERTICAL|wx.ALL,8)
+
         self.SetSizer(sizer)
 
 # main control panel
@@ -460,9 +505,13 @@ class MainControlPanel(wx.Panel):
         self.trackingPanel = TrackingPanel(self)
         self.targetOption = TargetOptionPanel(self)
         sizer.Add(self.mainControl,0,wx.EXPAND,0)
+        # tracking options
+        self.trackingOption = TrackingOption(self)
         sizer.AddSpacer(10)
         # add selectedTarget panel to the main sizer
-        sizer.Add(self.selectedTarget,0,wx.EXPAND,0)
+        sizer.Add(self.selectedTarget,0,wx.TOP|wx.EXPAND,8)
+        sizer.AddSpacer(8)
+        sizer.Add(self.trackingOption,0,wx.TOP|wx.EXPAND,8)
         sizer.AddStretchSpacer()
         sizer.Add(self.trackingPanel,0,wx.ALIGN_RIGHT|wx.ALL,8)
         sizer.Add(self.targetOption,0,wx.ALIGN_RIGHT|wx.ALL,8)
