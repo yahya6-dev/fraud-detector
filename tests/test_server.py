@@ -6,7 +6,7 @@ from multiprocessing import Process
 sys.path.append("../server1")
 from server1 import Server1
 import numpy as np 
-import cv2,zlib
+import cv2,zlib,_thread as thread,time
 
 class TestServerAuthentication(unittest.TestCase):
     @classmethod
@@ -28,56 +28,32 @@ class TestServerAuthentication(unittest.TestCase):
 
     def test_client_connection(self):
         time.sleep(2)
-        client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        client = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         client.connect(self.serverAddr)
 
-        # received data from our server response
-        data = client.recv(self.MAXBUFF)
-        print("client received on first connection =>", data.decode("ascii"))
+        client.sendto(Server1.GET_CAMERA_1,self.serverAddr)
+        
+        reply,addr = client.recvfrom(self.MAXBUFF)
+        # send server camera query
+        frame = b""
+        while True and cv2.waitKey():
+            client.sendto(Server1.GET_CAMERA_1,self.serverAddr)
+            data,addr = client.recvfrom(1024*6)
+            print("received =>",data)
+            if data == Server1.START_OF_FRAME:
+                frame = b""
 
-        self.assertEqual(Server1.AUTH_CMD,data)
-        # client credntials
-        creds = pickle.dumps(["admin","admin"])
-        bytesSent = client.send(creds)
-        print("Client waiting for response => byte sent",bytesSent)
-        # server response after login
-        reply = client.recv(bytesSent)
-        # send server status of beeing authenticated
-        client.send(Server1.SUCCESS)
-        print(reply)
-        self.assertTrue(reply == Server1.AUTH_SUCCESS)
-        print("server reply after login => %s" % reply.decode("ascii"))
-        reply = client.recv(self.MAXBUFF)
-        print("reply after authentication",reply.decode("ascii"))
-        # screen size
-        size = [1000,1000]
-        client.send(pickle.dumps(size))
-        reply = client.recv(self.MAXBUFF)
-        # sending response after sending screen size
-        client.send(Server1.SUCCESS)
-        print(reply,"After sending screen configuration")
-        self.assertTrue(reply == Server1.SUCCESS)
+            elif data == Server1.END_OF_FRAME:
+                try:
+                    frame = zlib.decompress(frame)
+                    frame = pickle.loads(frame)
+                    print(frame)
+                    frame = b""
+                except:
+                    frame = b""
+            else:
+                frame += data
+            
+             
 
-        # receive streaming server info
-        reply = client.recv(self.MAXBUFF)
-        fps,streamServerAddress = pickle.loads(reply)
-        self.assertTrue(fps != None)
-        print("streaming server fps and address",fps,streamServerAddress)
-        client.send(Server1.SUCCESS)
-
-        reply = client.recv(self.MAXBUFF)
-        print("server reply for cmd")
-        client.send(Server1.GET_CAMERA_1)
-        reply = client.recv(self.MAXBUFF)
-
-        # send a new request to shutdown
-        client.send(Server1.SERVER_SHUTDOWN)
-        clientStreamSock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        clientStreamSock.connect(streamServerAddress)
-        print(clientStreamSock.getpeername(),"client connect to udp streaming server")
-        clientStreamSock.close()
-        client.close()
-
-
-    def recvFrame(self,clientStreamSock):
-        pass
+        

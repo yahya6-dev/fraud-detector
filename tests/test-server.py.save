@@ -1,7 +1,0 @@
-import unittest
-import os
-
-
-class TestServerAuthentication(unittest.TestCase):
-	def setUp(self):
-		
