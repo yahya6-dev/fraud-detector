@@ -7,7 +7,7 @@ import socket
 import cv2, pickle, time,sys
 import _thread as thread
 import numpy as np
-import os,sqlite3,datetime,zlib
+import os,sqlite3,datetime,zlib,pickle
 from threading import Timer
 
 
@@ -118,44 +118,38 @@ class Server1:
         reply = reply
         
         while True:
+            self.success0, self.frame0 = self.cam0.read()
+            print(reply)
             if reply == Server1.GET_CAMERA_1:
                 if self.success0:
-                    self.lock.acquire()
                     self.sendFrame(addr,self.frame0)
-                    self.lock.release()
+                    print("serving client another frame")
+    
 
             elif reply == Server1.GET_CAMERA_2:            
                 if self.success1:
-                    self.lock.acquire()
                     self.sendFrame(addr,self.frame1)
-                    self.lock.release()
+                    
             
             elif reply == Server1.GET_CAMERA_3:
                 if self.success0:
-                    self.lock.acquire()
                     self.sendFrame(addr,self.frame0)
-                    self.lock.release()
+                
 
             elif reply == Server1.FRAME_TYPE_GRAY_CAM_1:
                 if self.success0:
-                    self.lock.acquire()
                     frame = cv2.cvtColor(self.frame0,cv2.COLOR_BGR2GRAY)
                     self.sendFrame(addr,frame)
-                    self.lock.release()
 
             elif reply == Server1.FRAME_TYPE_GRAY_CAM_2:
                 if self.success0:
-                    self.lock.acquire()
                     frame = cv2.cvtColor(self.frame1,cv2.COLOR_BGR2GRAY)
                     self.sendFrame(addr,frame)
-                    self.lock.release()
 
             elif reply == Server1.FRAME_TYPE_GRAY_CAM_3:
                 if self.success0:
-                    self.lock.acquire()
                     frame = cv2.cvtColor(self.frame0,cv2.COLOR_BGR2GRAY)
                     self.sendFrame(addr,frame)
-                    self.lock.release()
 
             elif reply == Server1.SERVER_STOP:
                 self.sock.sendTo(Server1.SUCCESS)
@@ -163,22 +157,24 @@ class Server1:
             elif reply == Server1.SERVER_SHUTDOWN:
                 break
 
-            reply,addr = self.sock.recvfrom(1024*6)     
+            reply,addr = self.sock.recvfrom(1024*3)
+                 
 
     def sendFrame(self,addr,frame):
         # buffer length
-        maxbuffer = 1024 * 6
-        frame = pickle.dumps(self.frame0)
+        maxbuffer = 1024 * 3
+        frame = pickle.dumps(frame)
         # compressed frame
-        compressedFrame = zlib.compress(frame,9)
+        compressedFrame = zlib.compress(frame,9) 
 
         self.sock.sendto(Server1.START_OF_FRAME,addr)
 
-        while compressedFrame:
+        while compressedFrame: 
             compressedFrame,rest = compressedFrame[maxbuffer:], compressedFrame[:maxbuffer]
             self.sock.sendto(rest,addr)
-
+            time.sleep(0.001)
         self.sock.sendto(Server1.END_OF_FRAME,addr)
+
 
     def saveFrames(self,frame):
         pass
@@ -186,17 +182,17 @@ class Server1:
     def run(self):
         self.sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
         print("server listening for connection","video frames per second",self.fps)
-        maxbuffer = 1024 * 6
+        maxbuffer = 1024 * 3
 
         while True:
             print("server listening at",self.sock.getsockname())
             try:
-                self.success0, self.frame0 = self.cam0.read()
                 data,addr = self.sock.recvfrom(maxbuffer)
                 print("receive connection from =>",addr)
+        
                 # handle client in a new thread
-                thread.start_new_thread(self.handleClient,(addr,data))
-                
+                thread.start_new_thread(self.handleClient(addr,data))
+            
             except KeyboardInterrupt:
                 self.cam0.release()
                 sys.exit(0)

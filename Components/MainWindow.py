@@ -3,7 +3,13 @@ import wx,math
 from utils import getTrialInfo
 from GroupSizer import GroupSizer
 from wx.lib import sized_controls as sized
-import os
+import os,socket,zlib
+import sys,time,pickle
+import _thread as thread
+import cv2
+sys.path.append("server1")
+from server1 import Server1
+from multiprocessing import Process, Pipe
 
 # simple panel for representing play and stop camera functionalities
 class PlayPausedPanel(wx.Panel):
@@ -434,6 +440,8 @@ class TargetScreen(wx.Panel):
         
 
 class CamPanel(wx.Panel):
+    NO_DATA_MSG = b"NO_DATA"
+
     def __init__(self,parent):
         super(CamPanel,self).__init__(parent)
         # main sizer
@@ -453,8 +461,12 @@ class CamPanel(wx.Panel):
         # get panel size
         x,y = self.TopLevelParent.GetSize()
         print(x,y,"toplevel")
+        # server address
+        self.serverAddr = ("",8000)
+        self.MAXBUFF = 1024 * 6
         # image window
         self.image = wx.StaticBitmap(self,bitmap=wx.Bitmap("./Components/assets/other.jpeg"),size=(x*2,y))
+        self.WIDTH,self.HEIGHT = x*2,y
         # buttons sizer
         buttonSizer = wx.BoxSizer(wx.HORIZONTAL)
         buttonSizer.Add(self.bt1,1,wx.LEFT|wx.BOTTOM,16)
@@ -466,11 +478,82 @@ class CamPanel(wx.Panel):
         sizer.Add(buttonSizer,1,wx.ALL|wx.EXPAND,0)
         sizer.Add(self.image,9,wx.TOP|wx.EXPAND,0)
         self.SetSizer(sizer)
-
+        self.frame = None
         # add event listener to the live camera and playback button
         self.Bind(wx.EVT_TOGGLEBUTTON,self.OnButton1Click,self.bt1)
         self.Bind(wx.EVT_TOGGLEBUTTON,self.OnButton2Click,self.bt2)
 
+        self.lock = thread.allocate_lock()
+        self.timer = wx.Timer(self)
+        # parent process and child process pipe ends
+        self.parentEnd,self.childEnd = Pipe()
+        proc = thread.start_new_thread(self.readMessage,(self.childEnd,))
+        # start periodic timer repeatedly
+        #self.timer.Start(100,oneShot=wx.TIMER_CONTINUOUS)
+        #self.Bind(wx.EVT_TIMER,self.readMessage)
+
+
+    def ReadFrame(self,event):
+        print(frame,"is this run")
+        width,height,_ = frame.shape
+        image = wx.Image(height,width,frame)
+        image.Rescale(self.WIDTH,self.HEIGHT*3)
+        print(image)
+        bitmap = wx.Bitmap(image)
+        """self.image.SetBitmap(bitmap)
+            self.image.Refresh()
+            wx.GetApp().Yield()"""
+
+    def readMessage(self,childEnd):
+        client = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        client.connect(self.serverAddr)
+
+        client.sendto(Server1.GET_CAMERA_1,self.serverAddr)
+        reply,addr = client.recvfrom(1024*2)
+        print(reply,"from the server")
+        # send server camera query
+
+        while True:
+            frame = b""
+            print("server loop")
+            # reply from the main process
+            reply = Server1.GET_CAMERA_1 #childEnd.recv()
+            print(reply,"reply from main process")
+            client.sendto(reply,self.serverAddr)
+            while True:
+                data,addr = client.recvfrom(1024*5)
+                if data == Server1.START_OF_FRAME:
+                    print("server start frame")
+                    frame = b""
+                    # childEnd.send(CamPanel.NO_DATA_MSG)
+                
+                elif data == Server1.END_OF_FRAME:
+                    print("server end frame")
+                    try:
+                        frame = zlib.decompress(frame)
+                        frame = pickle.loads(frame)
+                        print(frame,"from END FRAME")
+                        #childEnd.send(frame)
+                        width,height,_ = frame.shape
+                        image = wx.Image(height,width,frame)
+                        image.Rescale(self.WIDTH,self.HEIGHT*3)
+                        print(image)
+                        bitmap = wx.Bitmap(image)
+                        self.lock.acquire()
+                        self.image.SetBitmap(bitmap)
+                        self.image.Refresh()
+                        self.lock.release()
+
+                        frame = b""
+                        break
+                    except Exception as e:
+                        frame = b""
+                        print("exception happened",e)
+                        break
+                if data  != Server1.START_OF_FRAME:
+                    frame += data
+                # childEnd.send(CamPanel.NO_DATA_MSG)
+            
     def OnButton1Click(self,event):
         print(event.EventObject.Value,"Button 1")
         self.bt2.Value = False
@@ -482,6 +565,15 @@ class CamPanel(wx.Panel):
         self.bt1.Value = False
         self.bt3.Value = False
         self.bt4.Value = False
+
+    
+    def UpdateImage(self,event):
+        self.lock.acquire()
+        print(self.frame)
+        self.lock.release()
+
+        
+
         
 # panel containing detect motion options
 class TrackingOption(wx.Panel):

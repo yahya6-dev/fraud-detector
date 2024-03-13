@@ -2,8 +2,10 @@ import unittest
 import os,socket,time
 import sys,pickle
 from multiprocessing import Process 
+
 # include server directory to its path
 sys.path.append("../server1")
+
 from server1 import Server1
 import numpy as np 
 import cv2,zlib,_thread as thread,time
@@ -36,10 +38,9 @@ class TestServerAuthentication(unittest.TestCase):
         reply,addr = client.recvfrom(self.MAXBUFF)
         # send server camera query
         frame = b""
-        while True and cv2.waitKey():
+        while True:
             client.sendto(Server1.GET_CAMERA_1,self.serverAddr)
             data,addr = client.recvfrom(1024*6)
-            print("received =>",data)
             if data == Server1.START_OF_FRAME:
                 frame = b""
 
@@ -47,6 +48,8 @@ class TestServerAuthentication(unittest.TestCase):
                 try:
                     frame = zlib.decompress(frame)
                     frame = pickle.loads(frame)
+                    cv2.imwrite("out.jpg",frame)
+                    break
                     print(frame)
                     frame = b""
                 except:
