@@ -21,9 +21,9 @@ class PlayPausedPanel(wx.Panel):
         self.flag = False
         # add controls image and label
         self.label = wx.StaticText(self,label=label)
-        self.playImage = wx.Image(image)
+        self.pausedImage = wx.Image(image)
+        self.playImage = wx.Image("Components/assets/pause.png")
         self.image = wx.StaticBitmap(self,bitmap=wx.Bitmap(self.playImage))
-        self.pausedImage = wx.Image("Components/assets/pause.png")
         # add controls to the sizer
         sizer.Add(self.label,0,wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL,4)
         sizer.Add(self.image,0,wx.EXPAND|wx.ALL,4)
@@ -43,6 +43,7 @@ class PlayPausedPanel(wx.Panel):
             # send special request to continue receiving data
         self.Refresh()
         print("Why Dont Run")
+
 # simple class with label and image vertically aligned
 class LabelAndImageVertical(wx.Panel):
     def __init__(self,parent,label,image,image2):
@@ -172,6 +173,7 @@ class LabelAndImageHorizontal(wx.Panel):
         self.image = wx.StaticBitmap(self,bitmap=wx.Bitmap(image))
         # add radio button
         self.radio = wx.CheckBox(self,size=(-1,32))
+        self.radio.Disable()
         # add image to the hsizer
         sizer.Add(self.image,0,wx.ALL,0)
         sizer.Add(self.radio,0,wx.LEFT,4)
@@ -188,6 +190,7 @@ class FrameType(wx.Panel):
         self.label = wx.StaticText(self,label="Frame Type")
         # add choice option
         self.options = wx.RadioBox(self,choices=["Gray","Color"],style=wx.RA_SPECIFY_ROWS)
+        self.options.SetSelection(1)
         sizer.Add(self.label,0,wx.TOP|wx.LEFT|wx.RIGHT,4)
         sizer.Add(self.options,0,wx.ALL,4)
         # add sizer to the main layout
@@ -295,6 +298,7 @@ class CameraTools(wx.Panel):
         # bind paint event to draw a line atop of title
         self.Bind(wx.EVT_PAINT,self.OnPaint)
         self.close.Bind(wx.EVT_BUTTON,lambda event: self.TopLevelParent.Close())
+
     def OnPaint(self,event):
         dc = wx.PaintDC(self)
         x,y,w,h = self.titleLabel.GetRect()
@@ -484,27 +488,9 @@ class CamPanel(wx.Panel):
         self.Bind(wx.EVT_TOGGLEBUTTON,self.OnButton2Click,self.bt2)
 
         self.lock = thread.allocate_lock()
-        self.timer = wx.Timer(self)
-        # parent process and child process pipe ends
-        self.parentEnd,self.childEnd = Pipe()
-        proc = thread.start_new_thread(self.readMessage,(self.childEnd,))
-        # start periodic timer repeatedly
-        #self.timer.Start(100,oneShot=wx.TIMER_CONTINUOUS)
-        #self.Bind(wx.EVT_TIMER,self.readMessage)
+        proc = thread.start_new_thread(self.readMessage,())
 
-
-    def ReadFrame(self,event):
-        print(frame,"is this run")
-        width,height,_ = frame.shape
-        image = wx.Image(height,width,frame)
-        image.Rescale(self.WIDTH,self.HEIGHT*3)
-        print(image)
-        bitmap = wx.Bitmap(image)
-        """self.image.SetBitmap(bitmap)
-            self.image.Refresh()
-            wx.GetApp().Yield()"""
-
-    def readMessage(self,childEnd):
+    def readMessage(self):
         client = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         client.connect(self.serverAddr)
 
@@ -516,12 +502,25 @@ class CamPanel(wx.Panel):
         while True:
             frame = b""
             print("server loop")
-            # reply from the main process
-            reply = Server1.GET_CAMERA_1 #childEnd.recv()
+            if self.playPaused.flag:
+                reply = Server1.SERVER_STOP
+
+            elif self.frameType.GetSelection() == 0:
+                reply = Server1.SERVER_FRAME_TYPE_GRAY_CAM_1
+            
+            else:
+                # reply from the main process
+                reply = Server1.GET_CAMERA_1
+
             print(reply,"reply from main process")
             client.sendto(reply,self.serverAddr)
-            while True:
-                data,addr = client.recvfrom(1024*5)
+
+            # if server stop receive ok message from the server
+            if self.playPaused.flag:
+                data,addr = client.recvfrom(1024)
+        
+            while True and  reply != Server1.SERVER_STOP:
+                data,addr = client.recvfrom(1024*6)
                 if data == Server1.START_OF_FRAME:
                     print("server start frame")
                     frame = b""
@@ -533,11 +532,17 @@ class CamPanel(wx.Panel):
                         frame = zlib.decompress(frame)
                         frame = pickle.loads(frame)
                         print(frame,"from END FRAME")
-                        #childEnd.send(frame)
-                        width,height,_ = frame.shape
-                        image = wx.Image(height,width,frame)
-                        image.Rescale(self.WIDTH,self.HEIGHT*3)
-                        print(image)
+                        if reply == Server1.SERVER_FRAME_TYPE_GRAY_CAM_1:
+                            frame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
+                            width,height,_ = frame.shape
+                            image = wx.Image(height,width,frame)
+                            image.Rescale(self.WIDTH,self.HEIGHT*2)
+                            image = image.ConvertToGreyscale()
+                        else:
+                            width,height,_ = frame.shape
+                            image = wx.Image(height,width,frame)
+                            image.Rescale(self.WIDTH,self.HEIGHT*3)
+                            print(image)
                         bitmap = wx.Bitmap(image)
                         self.lock.acquire()
                         self.image.SetBitmap(bitmap)
@@ -550,7 +555,7 @@ class CamPanel(wx.Panel):
                         frame = b""
                         print("exception happened",e)
                         break
-                if data  != Server1.START_OF_FRAME:
+                if data  != Server1.START_OF_FRAME and data != Server1.SUCCESS:
                     frame += data
                 # childEnd.send(CamPanel.NO_DATA_MSG)
             
@@ -688,6 +693,9 @@ class MainWindowPanel(wx.Panel):
         self.topRight = CameraTools(self)
         # add camera component panel
         self.cameraComponent = CamPanel(self)
+        # pass play button so that it can be used in message
+        self.cameraComponent.playPaused = self.topRight.play
+        self.cameraComponent.frameType = self.topRight.frameType.options
         # section to our main box sizer
         self.groupsizer.AddItem(self.targetScreen,1,wx.ALL|wx.EXPAND,8)
         self.groupsizer.AddItem(self.cameraComponent,3,wx.ALL|wx.EXPAND,8)

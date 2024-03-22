@@ -119,6 +119,7 @@ class Server1:
         
         while True:
             self.success0, self.frame0 = self.cam0.read()
+            cv2.rectangle(self.frame0,(10,10),(200,200),(38,124,254),2)
             print(reply)
             if reply == Server1.GET_CAMERA_1:
                 if self.success0:
@@ -136,23 +137,24 @@ class Server1:
                     self.sendFrame(addr,self.frame0)
                 
 
-            elif reply == Server1.FRAME_TYPE_GRAY_CAM_1:
+            elif reply == Server1.SERVER_FRAME_TYPE_GRAY_CAM_1:
                 if self.success0:
                     frame = cv2.cvtColor(self.frame0,cv2.COLOR_BGR2GRAY)
+                    print("server frame",frame)
                     self.sendFrame(addr,frame)
 
-            elif reply == Server1.FRAME_TYPE_GRAY_CAM_2:
+            elif reply == Server1.SERVER_FRAME_TYPE_GRAY_CAM_2:
                 if self.success0:
                     frame = cv2.cvtColor(self.frame1,cv2.COLOR_BGR2GRAY)
                     self.sendFrame(addr,frame)
 
-            elif reply == Server1.FRAME_TYPE_GRAY_CAM_3:
+            elif reply == Server1.SERVER_FRAME_TYPE_GRAY_CAM_3:
                 if self.success0:
                     frame = cv2.cvtColor(self.frame0,cv2.COLOR_BGR2GRAY)
                     self.sendFrame(addr,frame)
 
             elif reply == Server1.SERVER_STOP:
-                self.sock.sendTo(Server1.SUCCESS)
+                self.sock.sendto(Server1.SUCCESS,addr)
 
             elif reply == Server1.SERVER_SHUTDOWN:
                 break
@@ -162,7 +164,7 @@ class Server1:
 
     def sendFrame(self,addr,frame):
         # buffer length
-        maxbuffer = 1024 * 3
+        maxbuffer = (1024 * 3) + 1000
         frame = pickle.dumps(frame)
         # compressed frame
         compressedFrame = zlib.compress(frame,9) 
@@ -172,7 +174,7 @@ class Server1:
         while compressedFrame: 
             compressedFrame,rest = compressedFrame[maxbuffer:], compressedFrame[:maxbuffer]
             self.sock.sendto(rest,addr)
-            time.sleep(0.001)
+            time.sleep(0.0001)
         self.sock.sendto(Server1.END_OF_FRAME,addr)
 
 
