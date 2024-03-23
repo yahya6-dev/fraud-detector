@@ -164,7 +164,7 @@ class Server1:
 
     def sendFrame(self,addr,frame):
         # buffer length
-        maxbuffer = (1024 * 3) + 1000
+        maxbuffer = 1024 * 6 
         frame = pickle.dumps(frame)
         # compressed frame
         compressedFrame = zlib.compress(frame,9) 
