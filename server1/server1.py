@@ -27,6 +27,7 @@ class Server1:
     SERVER_STOP = b"STOP"
     AUTH_NEEDED = b"ERROR_AUTH_NEEDED"
     AUTH_SUCCESS = b"AUTH_SUCCESS"
+    SERVER_TARGET_REQUEST = b"SERVER_TARGET_REQUEST"
     SERVER_FRAME_TYPE_COLOR_CAM_1 = b"FRAME_TYPE_COLOR_CAM_1"
     SERVER_FRAME_TYPE_GRAY_CAM_1  = b"FRAME_TYPE_GRAY_CAM_1"
     SERVER_FRAME_TYPE_COLOR_CAM_2 = b"FRAME_TYPE_COLOR_CAM_2"
@@ -38,12 +39,13 @@ class Server1:
     START_OF_FRAME = b"START_OF_FRAME"
 
     def __init__(self,host,port,camera1,camera2=None,db=None):
+        # detectors
+        self.faceDetector = cv2.CascadeClassifier("../Components/assets/models/haarcascade_frontalface_alt_tree.xml")
+        self.upperBodyDetector = cv2.CascadeClassifier("../Components/assets/models/haarcascade_upperbody.xml")
+        self.fullBody = cv2.CascadeClassifier("../Components/assets/models/haarcascade_fullbody.xml")
         # main socket that normally clients connect to
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         self.sock.bind((host,port))
-        # socket for streaming frame
-        self.streamingServer = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        #self.streamingServer.bind((host,7000))
         # internal server sock for connecting to the second server TCP
         self.serverSock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         # list of camera that normally the server serve
@@ -119,8 +121,22 @@ class Server1:
         
         while True:
             self.success0, self.frame0 = self.cam0.read()
-            cv2.rectangle(self.frame0,(10,10),(200,200),(38,124,254),2)
             print(reply)
+            reply,rectSize,x,y,selectTarget = pickle.loads(reply)
+            print(reply,rectSize,x,y,selectTarget)
+            # special case for a target request 
+            if reply == Server1.SERVER_TARGET_REQUEST:
+                self.lock.acquire()
+                targetFrame = self.frame0[y:rectSize+y,x:rectSize+x]
+                self.sendFrame(addr,targetFrame)
+                self.lock.release()
+                break
+
+            if selectTarget:
+                cv2.rectangle(self.frame0,(x,y),( rectSize+x,rectSize+y),(237,30,12),2)
+            
+            else:
+                cv2.rectangle(self.frame0,(x,y),(rectSize+x,rectSize+y),(38,124,254),1)
             if reply == Server1.GET_CAMERA_1:
                 if self.success0:
                     self.sendFrame(addr,self.frame0)
@@ -155,7 +171,8 @@ class Server1:
 
             elif reply == Server1.SERVER_STOP:
                 self.sock.sendto(Server1.SUCCESS,addr)
-
+                time.sleep(0.0001)
+                
             elif reply == Server1.SERVER_SHUTDOWN:
                 break
 
@@ -184,7 +201,7 @@ class Server1:
     def run(self):
         self.sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
         print("server listening for connection","video frames per second",self.fps)
-        maxbuffer = 1024 * 3
+        maxbuffer = 1024 * 6
 
         while True:
             print("server listening at",self.sock.getsockname())
@@ -193,7 +210,7 @@ class Server1:
                 print("receive connection from =>",addr)
         
                 # handle client in a new thread
-                thread.start_new_thread(self.handleClient(addr,data))
+                thread.start_new_thread(self.handleClient,(addr,data))
             
             except KeyboardInterrupt:
                 self.cam0.release()
