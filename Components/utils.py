@@ -1,6 +1,7 @@
 # this contain files for accessing db and 
 # related utilities
 import sqlite3,os
+import pygame
 
 def checkLogin(username,password):
     """ check the supplied username and password in sqlite
@@ -56,3 +57,6 @@ def getTrialInfo(filename="./Components/users.sqlite"):
     return cursor,conn,cursor.fetchone()
 
 
+def playSound(filename):
+    pygame.mixer.init()
+    pygame.mixer.Sound(filename).play()
