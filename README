@@ -1,12 +1,12 @@
 This is software developed by TTC Technology Company using opensource computer vision library,
 for detecting faces and searching images using image descriptor.
 Detect a real time fraud and alerting on a real time using frames per second to analyse for fraud
-acivity using neural network.
+activity using neural network.
 
-Internal Implementation it uses two servers:
+Internal Implementation it uses one server:
     1.Running torch or cv2.dnn model for detecting fraud in frames per second, then reporting back to
-    the second server, that imform the connected clients for any incident.
-    2.Second server bridge the connection between the first server and clients, but its uses is to record a camera frames back to the connected clients such desktop or mobile phones, while running several computation such as detecting faces, detecting motion ie.
+     the connected clients for any accident using special response.
+    
 
 Note clients on first connection are required to log in using credentials which is stored in a sqlite3 database file.
 
