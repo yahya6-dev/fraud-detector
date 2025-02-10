@@ -1,6 +1,6 @@
 This is software developed by TTC Technology Company using opensource computer vision library,
 for detecting faces and searching images using image descriptor.
-Detect a real time fraud and alerting on a real time using frames per second to analyse for fraud
+It Detects in a real time fraud and alerting on a real time by analysing individual frames for fraud
 activity using neural network.
 
 Internal Implementation it uses one server:
@@ -12,4 +12,3 @@ Note clients on first connection are required to log in using credentials which 
 
 Several other technology are used such as pygame to use Computer Speaker for alerting in case of fraud.
 WxPython3 which is used to construct the Graphical user interface.
-We use UDP for transferring frame so that it become more efficient than TCP  even if some frame are missing.
